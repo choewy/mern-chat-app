@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import express, { Application } from 'express';
 import cors from 'cors';
+import routes from './routes';
 import mongoose from 'mongoose';
 
 const initConfigs = {
@@ -52,7 +53,12 @@ export class App {
     this.app.use(cors({ origin: '*', credentials: true }));
   }
 
-  private setRouters() {}
+  private setRouters() {
+    routes.forEach((route) => {
+      const { path, router } = route;
+      this.app.use(path, router);
+    });
+  }
 
   listen() {
     const { appConfig, mongoConfig } = this.configs;
