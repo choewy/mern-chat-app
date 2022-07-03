@@ -1,0 +1,14 @@
+version: '0.1'
+
+services:
+  db:
+    image: mongo:latest
+    env_file:
+      - .env.mongodb
+    volumes:
+      - ./db:/var/lib/mongodb
+      - ./log:/var/log/mongodb
+      - ./mongod.conf:/etc/mongod.conf.orig
+    ports:
+      - 5002:27017
+    restart: always

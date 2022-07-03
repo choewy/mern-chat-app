@@ -1,0 +1,4 @@
+.env.mongodb
+
+/db
+/log
