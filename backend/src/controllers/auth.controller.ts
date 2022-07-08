@@ -29,6 +29,7 @@ const authController = (controllerResponse: ControllerResponse) => ({
         try {
           const refreshDto = transformRefreshData(req.body);
           const result = await authService.refreshAuth(refreshDto);
+          controllerResponse.success(res, 200, result);
         } catch (error) {
           controllerResponse.error(res, error);
         }
