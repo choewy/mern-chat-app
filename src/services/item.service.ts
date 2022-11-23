@@ -47,25 +47,16 @@ export class ItemService {
       .map((item) => Object.assign<Partial<Item>, Item>({}, item));
   }
 
-  calcBonusRateByNoLuck(
-    { rate, ...noLuckItem }: Item,
-    level: Level,
-  ): [Decimal, Item] {
-    const newNoLuckItem = Object.assign<Partial<Item>, Partial<Item>>(
-      { rate: rate.minus(level.noLuckReduceRate) },
-      noLuckItem,
-    ) as Item;
+  calcBonusRateByNoLuck(noLuckItem: Item, level: Level): [Decimal] {
+    const noLuckItemRate = new Decimal(noLuckItem.rate).minus(
+      level.noLuckReduceRate,
+    );
 
-    if (newNoLuckItem.rate.isZero()) {
-      return [new Decimal(0), newNoLuckItem];
+    if (noLuckItemRate.isPositive()) {
+      return [level.noLuckReduceRate];
     }
 
-    console.log(newNoLuckItem.rate.isPositive());
-    if (newNoLuckItem.rate.isPositive()) {
-      return [newNoLuckItem.rate, newNoLuckItem];
-    }
-
-    return [rate, newNoLuckItem];
+    return [noLuckItem.rate];
   }
 
   calcBonusRateByNormal(bonusRates: Decimal, normalItems: Item[]): Decimal {
