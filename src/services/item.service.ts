@@ -1,89 +1,77 @@
 import Decimal from 'decimal.js';
-import { Level, Item, ItemType } from '../data';
+import { Level, Item, Levels } from '../data';
 import { RandomService } from '../utils';
+import { ItemRepository } from './item.repository';
 
 export class ItemService {
+  private readonly levels = Levels;
+
   constructor(
-    private readonly levels: Level[],
-    private readonly items: Item[],
+    private readonly itemRepository: ItemRepository,
     private readonly randomService: RandomService,
-  ) {
-    const [equals, total] = this.validate(this.items);
-
-    if (!equals) {
-      throw new Error(`Item's total rate is not 100(current : ${total})`);
-    }
-  }
-
-  private validate<T extends { rate: Decimal }>(
-    rows: T[],
-    maxRate: Decimal = new Decimal(100),
-  ): [boolean, number] {
-    const total = rows.reduce<Decimal>((rate, row) => {
-      return rate.plus(row.rate);
-    }, new Decimal(0));
-
-    return [total.equals(maxRate), parseFloat(total.toFixed(3))];
-  }
+  ) {}
 
   getItems(): Item[] {
-    return this.items;
+    return this.itemRepository.getItems();
   }
 
   pickLevel(): Level {
     return this.randomService.pick(this.levels);
   }
 
-  getNoLuckItem(): Item {
-    return Object.assign<Partial<Item>, Item>(
-      {},
-      this.items.find(({ type }) => type === ItemType.NoLuck),
-    );
+  pickItem(adjustedItems: Item[]): Item {
+    return this.randomService.pick(adjustedItems);
   }
 
-  getNormalItems(): Item[] {
-    return this.items
-      .filter(({ type }) => type === ItemType.Normal)
-      .map((item) => Object.assign<Partial<Item>, Item>({}, item));
-  }
+  calcBonusRateByNoLuck(noLuckItem: Item, level: Level): [Decimal, Decimal] {
+    const rate = new Decimal(noLuckItem.rate).minus(level.noLuckReduceRate);
 
-  calcBonusRateByNoLuck(noLuckItem: Item, level: Level): [Decimal] {
-    const noLuckItemRate = new Decimal(noLuckItem.rate).minus(
-      level.noLuckReduceRate,
-    );
+    let totalBonusRate: Decimal;
+    let noLuckItemRate: Decimal;
 
-    if (noLuckItemRate.isPositive()) {
-      return [level.noLuckReduceRate];
+    if (rate.isZero() || rate.isNegative()) {
+      totalBonusRate = noLuckItem.rate;
+      noLuckItemRate = new Decimal(0);
+    } else {
+      totalBonusRate = level.noLuckReduceRate;
+      noLuckItemRate = rate;
     }
 
-    return [noLuckItem.rate];
+    return [totalBonusRate, noLuckItemRate];
   }
 
-  calcBonusRateByNormal(bonusRates: Decimal, normalItems: Item[]): Decimal {
-    return bonusRates.isZero()
+  calcBonusRateByNormalItems(
+    totalBonusRate: Decimal,
+    normalItems: Item[],
+  ): Decimal {
+    return totalBonusRate.isZero()
       ? new Decimal(0)
-      : bonusRates.dividedBy(normalItems.length);
+      : totalBonusRate.dividedBy(normalItems.length);
   }
 
-  calcItemRateByBonusRate(
+  plusItemRateWithBonusRate(
+    bonusRate: Decimal,
     normalItems: Item[],
     noLuckItem: Item,
-    bonusRate: Decimal,
+    noLuckItemRate: Decimal,
   ): Item[] {
-    const items = normalItems.map((item) =>
-      Object.assign<Item, Partial<Item>>(item, {
-        rate: item.rate.plus(bonusRate),
-      }),
-    );
+    const items = normalItems.map(({ rate, ...item }) =>
+      Object.assign<Partial<Item>, Partial<Item>>(
+        { rate: rate.plus(bonusRate) },
+        item,
+      ),
+    ) as Item[];
 
-    if (!noLuckItem.rate.isZero() && noLuckItem.rate.isPositive()) {
-      items.push(noLuckItem);
+    if (!noLuckItemRate.isZero() && noLuckItemRate.isPositive()) {
+      const { rate, ...noLick } = noLuckItem;
+      items.push(
+        Object.assign<Partial<Item>, Partial<Item>>(
+          { rate: noLuckItemRate },
+          noLick,
+        ) as Item,
+      );
     }
 
     return items;
-  }
-
-  pickItem(adjustedItems: Item[]): Item {
-    return this.randomService.pick(adjustedItems);
   }
 }

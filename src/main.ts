@@ -1,10 +1,15 @@
-import { Items, Levels } from './data';
-import { ItemService } from './services';
-import { Test } from './test';
+import { ItemRepository, ItemService, TestService } from './services';
 import { RandomService } from './utils';
+import { writeFileSync } from 'fs';
 
-const test = new Test(new ItemService(Levels, Items, new RandomService()));
+const itemService = new ItemService(new ItemRepository(), new RandomService());
+const testService = new TestService(itemService);
 
-[...Array(100)].forEach(() => {
-  console.log(test.testCalcNoLuckRateByLevel());
-});
+writeFileSync(
+  testService.createFileName(),
+  JSON.stringify(
+    [...Array(1000)].map(() => testService.e2e()),
+    null,
+    2,
+  ),
+);
