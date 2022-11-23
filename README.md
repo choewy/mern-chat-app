@@ -1,6 +1,1 @@
-# MERN Chat App
-
-- MongoDB
-- Express
-- ReactJs
-- NodeJS
+# Random Pick
